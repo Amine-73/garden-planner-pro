@@ -2,9 +2,11 @@ import mongoose from 'mongoose';
 
 const PlantSchema=new mongoose.Schema({
     name:{type:String,required:true},
-    spacing:Number,
-    expectedYield:Number,
-    daysToHarvest:Number
+    spacingInches:{type:Number,required:true},
+    yieldPerPlantLbs:{type:Number,required:true},
+    daysToHarvest:{type:Number,required:true},
+    image:{type:String}
 });
 
-module.exports=mongoose.model('Plant',PlantSchema)
+const Plant=mongoose.model('Plant',PlantSchema);
+export default Plant;
