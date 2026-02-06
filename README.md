@@ -8,7 +8,9 @@ A full-stack MERN application for smart garden planning and yield calculation.
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green.svg)](https://www.mongodb.com/)
 
 ## 🚀 Live Demo
-[Coming soon] | [Report Bug](https://github.com/YOUR_USERNAME/garden-planner-pro/issues) | [Request Feature](https://github.com/YOUR_USERNAME/garden-planner-pro/issues)
+
+<img width="1900" height="965" alt="image" src="https://github.com/user-attachments/assets/71887fba-70da-4d6a-8474-b7efbdef57ba" />
+
 
 ## ✨ Features
 - 📊 **Yield Calculator** with real-time results
