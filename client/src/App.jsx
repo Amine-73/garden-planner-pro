@@ -5,7 +5,7 @@ import {
   TextField, Box, AppBar, Toolbar, Paper, Button 
 } from '@mui/material';
 // Modern, reliable icons
-import { Sprout, Scale, Clock, Wallet } from 'lucide-react';
+import { Sprout, Scale, Clock, Wallet,Trash2 } from 'lucide-react';
 
 function App() {
  const [plants, setPlants] = useState([]);
@@ -32,17 +32,14 @@ function App() {
     }
   };
 
-  // 3. Initial Load
-  useEffect(() => {
-    fetchPlants();
-    fetchGardenHistory();
-  }, []);
+
 
   // 4. Calculation Logic
   const totalSavings = useMemo(() => {
     return plants.reduce((acc, plant) => {
       const qty = gardenData[plant._id] || 0;
-      return acc + (qty * plant.yieldPerPlantLbs * 4.50);
+      const price=plant.marketPricePerlb || 4.50;
+      return acc + (qty * plant.yieldPerPlantLbs * price);
     }, 0);
   }, [gardenData, plants]);
 
@@ -55,38 +52,51 @@ function App() {
   };
 
   // 6. Save Logic (The "Refined" Way)
-  const saveGarden = async () => {
-    // MODERN FIX: Only include plants where quantity is greater than 0
-    const items = Object.keys(gardenData)
-      .filter(id => gardenData[id] > 0) 
-      .map(id => ({
+    const saveGarden = async () => {
+    const items = Object.entries(gardenData)
+      .filter(([_, qty]) => qty > 0)
+      .map(([id, qty]) => ({
         plantId: id,
-        quantity: gardenData[id]
+        quantity: qty
       }));
 
     if (items.length === 0) {
-      alert("Please add at least one plant to your garden!");
+      alert("Please add at least one plant!");
       return;
     }
 
     try {
+      // Make sure this URL matches your server port (5000)
       const response = await axios.post('http://localhost:5000/api/gardens', {
         items,
         totalEstimatedSavings: totalSavings
       });
-      
-      alert("✅ Garden Plan Saved to Cloud!");
-      
-      // MODERN FIX: Refresh the history table immediately
+      alert("✅ Garden Plan Saved!");
       fetchGardenHistory(); 
-      
-      console.log("Saved Garden:", response.data);
     } catch (error) {
+      console.error("Full Error:", error.response?.data || error.message);
       alert("❌ Failed to save garden.");
-      console.error(error);
     }
   };
+
+  const deleteGarden = async (id) => {
+  if (window.confirm("Are you sure you want to delete this plan?")) {
+    try {
+      await axios.delete(`http://localhost:5000/api/gardens/${id}`);
+      // Refresh the list immediately after deleting
+      fetchGardenHistory();
+    } catch (error) {
+      console.error("Delete Error:", error);
+      alert("Failed to delete the plan.");
+    }
+  }
+};
   
+    // 3. Initial Load
+  useEffect(() => {
+    fetchPlants();
+    fetchGardenHistory();
+  }, []);
 
   return (
     <Box sx={{ width: '100vw', minHeight: '100vh', bgcolor: '#f8faf8', m: 0, p: 0 }}>
@@ -153,27 +163,37 @@ function App() {
             <Box sx={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ backgroundColor: '#f1f8e9' }}>
-                  <tr>
-                    <th style={{ padding: '16px', textAlign: 'left' }}>Date</th>
-                    <th style={{ padding: '16px', textAlign: 'left' }}>Plants</th>
-                    <th style={{ padding: '16px', textAlign: 'right' }}>Total Savings</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {savedGardens.map((garden) => (
-                    <tr key={garden._id} style={{ borderTop: '1px solid #eee' }}>
-                      <td style={{ padding: '16px' }}>
-                        {new Date(garden.createdAt).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        {garden.items.map(i => `${i.quantity}x ${i.plantId?.name || 'Plant'}`).join(', ')}
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right', fontWeight: 700, color: '#2e7d32' }}>
-                        ${garden.totalEstimatedSavings.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+  <tr>
+    <th style={{ padding: '16px', textAlign: 'left' }}>Date</th>
+    <th style={{ padding: '16px', textAlign: 'left' }}>Plants</th>
+    <th style={{ padding: '16px', textAlign: 'right' }}>Total Savings</th>
+    <th style={{ padding: '16px', textAlign: 'center' }}>Action</th> {/* New Header */}
+  </tr>
+</thead>
+<tbody>
+  {savedGardens.map((garden) => (
+    <tr key={garden._id} style={{ borderTop: '1px solid #eee' }}>
+      <td style={{ padding: '16px' }}>
+        {new Date(garden.createdAt).toLocaleDateString()}
+      </td>
+      <td style={{ padding: '16px' }}>
+        {garden.items.map(i => `${i.quantity}x ${i.plantId?.name || 'Plant'}`).join(', ')}
+      </td>
+      <td style={{ padding: '16px', textAlign: 'right', fontWeight: 700, color: '#2e7d32' }}>
+        ${garden.totalEstimatedSavings.toFixed(2)}
+      </td>
+      {/* New Action Cell */}
+      <td style={{ padding: '16px', textAlign: 'center' }}>
+        <Button 
+          onClick={() => deleteGarden(garden._id)}
+          sx={{ color: '#d32f2f', minWidth: 'auto', '&:hover': { bgcolor: '#ffebee' } }}
+        >
+          <Trash2 size={20} />
+        </Button>
+      </td>
+    </tr>
+  ))}
+</tbody>
               </table>
             </Box>
           )}
