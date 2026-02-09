@@ -63,6 +63,18 @@ app.get("/api/gardens/test", (req, res) =>
   res.send("Delete route is reachable"),
 ); // Optional test
 
+
+// Delete everything in the gardens collection
+app.delete("/api/gardens", async (req, res) => {
+  try {
+    const result=await Garden.deleteMany({});
+    console.log(`Deleted ${result.deletedCount} garden`)
+    res.json({ message: "All plans cleared" ,count:result.deletedCount});
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete("/api/gardens/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,6 +91,8 @@ app.delete("/api/gardens/:id", async (req, res) => {
       .json({ message: "Error deleting plan", error: error.message });
   }
 });
+
+
 
 mongoose
   .connect(process.env.MONGO_URL)
