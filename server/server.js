@@ -16,23 +16,24 @@ const PORT = process.env.PORT || 5000;
 
 // 2. SAVE A NEW GARDEN (The POST route your button needs)
 app.post("/api/gardens", async (req, res) => {
-  try {
-    const { items, totalEstimatedSavings } = req.body;
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: "Garden is empty" });
-    }
-    const newGarden = new Garden({
-      items,
-      totalEstimatedSavings,
-    });
 
-    const savedGarden = await newGarden.save();
-    res.status(201).json(savedGarden);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error saving garden", error: err.message });
+  const { items, totalEstimatedSavings } = req.body;
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ message: "Cannot save an empty garden plan." });
   }
+try {
+    let newGarden = new Garden({ items, totalEstimatedSavings });
+    await newGarden.save();
+    
+    // Pro move: populate the new garden before sending it back
+    newGarden = await Garden.findById(newGarden._id).populate('items.plantId');
+    
+    res.status(201).json(newGarden);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+
 });
 
 app.get("/api/plants", async (req, res) => {
@@ -92,6 +93,11 @@ app.delete("/api/gardens/:id", async (req, res) => {
   }
 });
 
+const updatePlants = async () => {
+  await Plant.updateMany({ name: /Tomato|Pepper|Cucumber/i }, { $set: { category: 'Vegetable' } });
+  await Plant.updateMany({ name: /Strawberry|Watermelon/i }, { $set: { category: 'Fruit' } });
+  await Plant.updateMany({ name: /Basil|Mint|Parsley/i }, { $set: { category: 'Herb' } });
+};
 
 
 mongoose
