@@ -9,10 +9,14 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "https://garden-planner-client.onrender.com", 
+  credentials: true
+}));
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
+
 
 // 2. SAVE A NEW GARDEN (The POST route your button needs)
 app.post("/api/gardens", async (req, res) => {
