@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { 
   Container, Typography, Grid, Card, CardContent, 
-  TextField, Box, AppBar, Toolbar, Paper, Button 
+  TextField, Box, AppBar, Toolbar, Paper, Button ,CircularProgress
 } from '@mui/material';
 import { Sprout, Scale, Clock, Wallet, Trash2 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer 
 } from 'recharts';
+import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
   const [plants, setPlants] = useState([]);
@@ -29,33 +30,37 @@ function App() {
   return images[name.toLowerCase()] || "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=300&q=80";
 };
 
-  const fetchPlants = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/plants');
-      setPlants(response.data);
-    } catch (error) {
-      console.error("Error fetching plants:", error);
-    }
-  };
-
   const fetchGardenHistory = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/gardens');
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/gardens`);
       setSavedGardens(response.data);
     } catch (error) {
       console.error("History Error:", error);
     }
-  };
+    };
+
+  
 
   useEffect(() => {
-    fetchPlants();
-    fetchGardenHistory();
-    // const loadData = async () => {
-    // setIsLoading(true);
-    // await Promise.all([fetchPlants(), fetchGardenHistory()]);
-    // setIsLoading(false);
-    // };
-    // loadData();
+    
+    const fetchPlants = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/plants`);
+      setPlants(response.data);
+    } catch (error) {
+      console.error("Error fetching plants:", error);
+    }
+    };
+    const loadData = async () => {
+    setIsLoading(true);
+    await Promise.all([fetchPlants(), fetchGardenHistory()]);
+    setIsLoading(false);
+    };
+
+    
+
+    
+    loadData();
   }, []);
 
   const totalSavings = useMemo(() => {
@@ -110,29 +115,34 @@ function App() {
       .map(([id, qty]) => ({ plantId: id, quantity: qty }));
 
     if (items.length === 0) {
-      alert("Please add at least one plant!");
+      toast.error("Please add at least one plant!");
       return;
     }
 
     try {
-      await axios.post('http://localhost:5000/api/gardens', {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/gardens`, {
         items,
         totalEstimatedSavings: totalSavings
       });
-      alert("✅ Garden Plan Saved!");
+      // alert("✅ Garden Plan Saved!");
       fetchGardenHistory(); 
+      toast.success('Garden plan saved successfully! 🌱', {
+        duration: 4000,
+        style: { border: '2px solid #2e7d32', padding: '16px', color: '#1b5e20' },
+      });                   
     } catch (error) {
-      alert("❌ Failed to save garden.");
+      toast.error("❌ Failed to save garden.");
     }
   };
 
   const deleteGarden = async (id) => {
     if (window.confirm("Delete this plan?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/gardens/${id}`);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/gardens/${id}`);
         fetchGardenHistory();
+        toast.error('Plan removed from history', { icon: '🗑️' });
       } catch (error) {
-        alert("Failed to delete.");
+        toast.error("Failed to delete.");
       }
     }
   };
@@ -141,13 +151,15 @@ function App() {
   if (window.confirm("Are you sure you want to delete ALL saved plans? This cannot be undone.")) {
     try {
       // We'll need to create this route in the backend next!
-      await axios.delete('http://localhost:5000/api/gardens');
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/gardens`);
       fetchGardenHistory();
     } catch (error) {
-      alert("Error clearing history");
+      toast.error("Error clearing history");
     }
   }
   };
+
+  const hasUnsavedChanges = Object.values(gardenData).some(val => val > 0);
 
 
   const exportToCSV = () => {
@@ -191,15 +203,16 @@ function App() {
           <Sprout style={{ marginRight: '12px' }} />
           <Typography variant="h6" sx={{ fontWeight: 800 }}>GARDEN PLANNER PRO</Typography>
         </Toolbar>
+        <Toaster position="top-right" reverseOrder={false} />
       </AppBar>
-      {/* {isLoading ? (
+      {isLoading ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 2 }}>
           <CircularProgress sx={{ color: '#2e7d32' }} />
           <Typography color="text.secondary" sx={{ fontWeight: 600 }}>
             Growing your garden...
           </Typography>
         </Box>
-      ) :( */}
+      ) :(
       <Container maxWidth="xl" sx={{ mt: 6, pb: 15 }}>
         
         {/* Header */}
@@ -484,7 +497,7 @@ function App() {
   )}
 </Box>
 
-      </Container>
+      </Container>)}
 
       {/* Floating Bar */}
       <Paper elevation={12} sx={{ position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)', width: { xs: '95%', md: '600px' }, p: 3, borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000 }}>
@@ -495,7 +508,21 @@ function App() {
             <Typography variant="h5" sx={{ fontWeight: 900 }}>${totalSavings.toFixed(2)}</Typography>
           </Box>
         </Box>
-        <Button variant="contained" color="success" onClick={saveGarden}>Save Plan</Button>
+        <Button 
+          variant="contained" 
+          onClick={saveGarden}
+          disabled={!hasUnsavedChanges} // Button is grayed out if nothing is entered
+          sx={{ 
+            bgcolor: '#1b5e20', 
+            px: 4, 
+            py: 1.5, 
+            borderRadius: 3,
+            fontSize: '1rem',
+            fontWeight: 800,
+            boxShadow: hasUnsavedChanges ? '0 8px 20px rgba(27,94,32,0.3)' : 'none',
+            '&:hover': { bgcolor: '#2e7d32' }
+          }}
+        >Save Plan</Button>
       </Paper>
     </Box>
   );
