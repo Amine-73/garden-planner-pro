@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: "https://garden-planner-client.onrender.com", 
+  origin: "https://garden-planner-pro-1.onrender.com", 
   credentials: true
 }));
 app.use(express.json());
