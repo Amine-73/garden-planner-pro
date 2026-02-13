@@ -18,7 +18,10 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 
-// 2. SAVE A NEW GARDEN (The POST route your button needs)
+// --- ROUTES ---
+
+
+// SAVE A NEW GARDEN
 app.post("/api/gardens", async (req, res) => {
   const { items, totalEstimatedSavings } = req.body;
 
@@ -40,6 +43,7 @@ app.post("/api/gardens", async (req, res) => {
   }
 });
 
+// GET ALL PLANTS
 app.get("/api/plants", async (req, res) => {
   try {
     const plants = await Plant.find();
@@ -49,7 +53,7 @@ app.get("/api/plants", async (req, res) => {
   }
 });
 
-// 3. GET GARDEN HISTORY (The GET route your table needs)
+// GET GARDEN HISTORY
 app.get("/api/gardens", async (req, res) => {
   try {
     const gardens = await Garden.find()
@@ -63,12 +67,10 @@ app.get("/api/gardens", async (req, res) => {
   }
 });
 
-// DELETE a specific garden plan
-app.get("/api/gardens/test", (req, res) =>
-  res.send("Delete route is reachable"),
-); // Optional test
 
-// Delete everything in the gardens collection
+
+// DELETE ALL GARDENS
+
 app.delete("/api/gardens", async (req, res) => {
   try {
     const result = await Garden.deleteMany({});
@@ -78,6 +80,7 @@ app.delete("/api/gardens", async (req, res) => {
   }
 });
 
+// DELETE A SPECIFIC GARDEN
 app.delete("/api/gardens/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -95,23 +98,14 @@ app.delete("/api/gardens/:id", async (req, res) => {
   }
 });
 
+// --- DATABASE & SERVER START ---
+
 mongoose
   .connect(process.env.MONGO_URL)
   .then(async () => {
     console.log("Database connected");
   })
-  .catch((err) => console.log("Connection error:", err));
-
-// const updatePlants = async () => {
-//   try {
-//     // This finds plants by name and adds the category field
-//     await Plant.updateMany({ name: /Tomato|Pepper|Cucumber/i }, { $set: { category: 'Vegetable' } });
-//     await Plant.updateMany({ name: /Strawberry|Watermelon/i }, { $set: { category: 'Fruit' } });
-//     await Plant.updateMany({ name: /Basil|Mint|Parsley/i }, { $set: { category: 'Herb' } });
-//   } catch (error) {
-//     console.error("Update failed:", error);
-//   }
-// };
+  .catch((err) => console.log("Connection error"));
 
 app.listen(PORT, () => {
   console.log(`Your server is running on port ${PORT}`);
