@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import  { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { 
   Container, Typography, Grid, Card, CardContent, 
@@ -124,7 +124,6 @@ function App() {
         items,
         totalEstimatedSavings: totalSavings
       });
-      // alert("✅ Garden Plan Saved!");
       fetchGardenHistory(); 
       toast.success('Garden plan saved successfully! 🌱', {
         duration: 4000,
