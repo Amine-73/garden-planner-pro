@@ -9,34 +9,41 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin: "https://garden-planner-pro-1.onrender.com", 
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "https://garden-planner-pro-1.onrender.com",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
-
 // --- ROUTES ---
-
 
 // SAVE A NEW GARDEN
 app.post("/api/gardens", async (req, res) => {
-  const { items, totalEstimatedSavings } = req.body;
+  // 1. Add userId and userEmail to the destructuring
+  const { items, totalEstimatedSavings, userId, userEmail } = req.body;
 
   if (!items || items.length === 0) {
     return res
       .status(400)
       .json({ message: "Cannot save an empty garden plan." });
   }
+
   try {
-    let newGarden = new Garden({ items, totalEstimatedSavings });
+    // 2. Include the user info in the new Garden object
+    let newGarden = new Garden({
+      items,
+      totalEstimatedSavings,
+      userId,
+      userEmail,
+    });
+
     await newGarden.save();
 
-    // Pro move: populate the new garden before sending it back
     newGarden = await Garden.findById(newGarden._id).populate("items.plantId");
-
     res.status(201).json(newGarden);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -56,7 +63,7 @@ app.get("/api/plants", async (req, res) => {
 // GET GARDEN HISTORY
 app.get("/api/gardens", async (req, res) => {
   try {
-    const gardens = await Garden.find()
+    const gardens = await Garden.find({ userId: req.query.userId })
       .populate("items.plantId")
       .sort({ createdAt: -1 });
     res.json(gardens);
@@ -67,7 +74,18 @@ app.get("/api/gardens", async (req, res) => {
   }
 });
 
+// --------------------------------
+app.get("/", async (req, res) => {
+  const { userId } = req.query; // Catch the ID from the frontend request
 
+  try {
+    // Find only gardens that match this specific User ID
+    const gardens = await Garden.find({ userId }).sort({ date: -1 });
+    res.json(gardens);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // DELETE ALL GARDENS
 
