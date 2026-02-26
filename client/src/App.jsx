@@ -14,8 +14,9 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { plantImages } from './assets/images';
 import { signInWithGoogle } from './firebase';
-import { auth, logOut } from "./firebase";
+import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { LogOut } from 'lucide-react';
 
 const getSeason = (name) => {
   const coolWeather = ['Lettuce', 'Spinach', 'Kale', 'Radish', 'Peas', 'Broccoli'];
@@ -504,9 +505,9 @@ const topPerformingPlants = useMemo(() => {
     
     <MenuItem onClick={handleLogout} sx={{ color: '#d32f2f', fontWeight: 600 }}>
       <ListItemIcon>
-        <logOut size={18} color="#d32f2f" />
+        <LogOut size={18} color="#d32f2f" />
       </ListItemIcon>
-      Logout
+      LogOut
     </MenuItem>
   </Menu>
 </Box>
