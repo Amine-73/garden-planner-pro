@@ -43,6 +43,7 @@ function App() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [user, setUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const open = Boolean(anchorEl);
 
 const handleMenuOpen = (event) => {
@@ -64,82 +65,129 @@ const getPlantImage = (name) => {
   return plantImages[key] || plantImages.default;
 };
 
-  const handleDownloadPDF = async () => {
+
+const handleDownloadPDF = async () => {
   const loadingToast = toast.loading("Generating your high-quality PDF...");
   setIsGeneratingPDF(true);
 
   const element = document.getElementById('garden-report');
   const pdfHeader = document.getElementById('pdf-header');
-  const floatingBar = document.querySelector('.floating-bar-class'); // Add a class to your Paper bar
+  const floatingBar = document.querySelector('.floating-bar-class'); // Select the floating bar
 
   if (!element) return;
 
   // 1. "CAPTURE MODE" - Temporary UI Changes
+  // Hide floating elements
   if (pdfHeader) pdfHeader.style.setProperty('display', 'block', 'important');
+  if (floatingBar) floatingBar.style.setProperty('display', 'none', 'important');
   
-  // Force a desktop-width for the screenshot so it's not "skinny" on mobile
-  const originalWidth = element.style.width;
-  const originalMaxWidth = element.style.maxWidth;
+  // Store original styles
+  const originalStyles = {
+    width: element.style.width,
+    maxWidth: element.style.maxWidth,
+    position: element.style.position,
+    overflow: element.style.overflow
+  };
   
-  // If on mobile, we force a wider layout for the PDF capture
+  // Temporarily modify element for better capture
+  element.style.overflow = 'visible'; // Ensure all content is visible
+  
+  // Force a desktop-width for the screenshot
   if (window.innerWidth < 900) {
-    element.style.width = '1024px'; 
-    element.style.maxWidth = 'none';
+    element.style.width = '1200px'; 
+    element.style.maxWidth = '1200px';
+    // Center the element to avoid cutting off edges
+    element.style.marginLeft = 'auto';
+    element.style.marginRight = 'auto';
   }
 
-  // Scroll to top to ensure no weird offsets
+  // Scroll to top
   window.scrollTo(0, 0);
 
-  // Small delay to allow MUI to re-render the wider layout
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // Wait for layout to stabilize
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   try {
+    // Get accurate dimensions
+    const elementRect = element.getBoundingClientRect();
+    
     const canvas = await html2canvas(element, {
       scale: 2, // High resolution
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff', // Clean white background
-      width: element.offsetWidth,
-      height: element.offsetHeight,
-      // Ensure we capture everything even if scrolled
+      backgroundColor: '#ffffff',
+      width: element.scrollWidth,
+      height: element.scrollHeight,
       windowWidth: element.scrollWidth,
       windowHeight: element.scrollHeight,
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
       x: 0,
       y: 0,
-      scrollX: 0,
-      scrollY: 0
+      allowTaint: false,
+      foreignObjectRendering: false, // Set to true if you have complex CSS
+      onclone: (clonedDoc, clonedElement) => {
+        // Additional styling for cloned element if needed
+        clonedElement.style.overflow = 'visible';
+      }
     });
 
-    // 2. RESTORE UI - Back to normal
-    if (pdfHeader) pdfHeader.style.display = 'none';
-    element.style.width = originalWidth;
-    element.style.maxWidth = originalMaxWidth;
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95); // JPEG is smaller/faster for PDFs
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
     
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     
-    const imgProps = pdf.getImageProperties(imgData);
-    const renderHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-    // If the content is longer than one page, jsPDF can handle it:
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, renderHeight);
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    
+    // Calculate scaling
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const width = imgWidth * ratio;
+    const height = imgHeight * ratio;
+    
+    // Center on page
+    const xOffset = (pdfWidth - width) / 2;
+    const yOffset = (pdfHeight - height) / 2;
+    
+    pdf.addImage(imgData, 'JPEG', xOffset, yOffset, width, height);
+    
+    // If content is taller than page, add more pages
+    if (height > pdfHeight) {
+      // Implement multi-page logic here if needed
+      // For now, just scale to fit
+    }
     
     pdf.save('My_Garden_Plan.pdf');
     toast.success("Report Ready!", { id: loadingToast });
+    
   } catch (error) {
-    console.error(error);
-    toast.error("Error generating PDF", { id: loadingToast });
-    // Cleanup if error occurs
-    if (pdfHeader) pdfHeader.style.display = 'none';
-    element.style.width = originalWidth;
-    element.style.maxWidth = originalMaxWidth;
+    console.error("PDF Generation Error:", error);
+    toast.error("Error generating PDF. Please try again.", { id: loadingToast });
   } finally {
+    // 2. RESTORE UI - Back to normal
+    if (pdfHeader) pdfHeader.style.display = 'none';
+    if (floatingBar) floatingBar.style.display = 'flex'; // or 'block' based on original display
+    
+    // Restore all original styles
+    element.style.width = originalStyles.width;
+    element.style.maxWidth = originalStyles.maxWidth;
+    element.style.position = originalStyles.position;
+    element.style.overflow = originalStyles.overflow;
+    
+    if (window.innerWidth < 900) {
+      element.style.marginLeft = '';
+      element.style.marginRight = '';
+    }
+    
     setIsGeneratingPDF(false);
   }
 };
+
 
 
 
@@ -282,6 +330,8 @@ useEffect(() => {
     toast.error("Please sign in to save!");
     return;
   }
+  
+  setIsSaving(true);
 
   const items = Object.entries(gardenData)
     .filter(([_, qty]) => qty > 0)
@@ -308,6 +358,8 @@ useEffect(() => {
   } catch (error) {
     console.error("Save Error:", error.response?.data);
     toast.error(error.response?.data?.message || "Failed to save.");
+  }finally{
+    setIsSaving(false);
   }
 };
 
@@ -568,10 +620,11 @@ const topPerformingPlants = useMemo(() => {
           <Typography variant="body1" color="text.secondary">Enter plant counts to see grocery savings.</Typography>
           
           <TextField
+          data-html2canvas-ignore="true"
             placeholder="Search for a plant (e.g. Tomato)..."
             variant="outlined"
             value={searchTerm}
-            data-html2canvas-ignore="true" 
+            
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ 
               width: { xs: '100%', md: '50%' },
@@ -691,6 +744,7 @@ const topPerformingPlants = useMemo(() => {
               </Typography>
 
               <TextField
+              data-html2canvas-ignore="true"
               label="Number of Plants"
               type="number"
               fullWidth
@@ -702,7 +756,7 @@ const topPerformingPlants = useMemo(() => {
               InputProps={{ disableUnderline: true, sx: { borderRadius: 2, bgcolor: '#f1f8e9' } }}
             />
             </CardContent>
-    </Card>
+      </Card>
             </Grid>
           )
           )}
@@ -942,6 +996,7 @@ const topPerformingPlants = useMemo(() => {
 
       {/* Floating Bar */}
 <Paper 
+  className="floating-bar-class"
   elevation={12} 
   sx={{ 
     position: 'fixed', 
@@ -1044,6 +1099,7 @@ const topPerformingPlants = useMemo(() => {
     </Button>
 
     <Button 
+      data-html2canvas-ignore="true"
       variant="outlined" 
       onClick={handleClearSelection} 
       disabled={!hasUnsavedChanges || isGeneratingPDF}
@@ -1062,7 +1118,7 @@ const topPerformingPlants = useMemo(() => {
     <Button 
       variant="contained" 
       onClick={saveGarden}
-      disabled={!hasUnsavedChanges}
+      // disabled={!hasUnsavedChanges}
       sx={{ 
         flex: 1.5, // Save button is more important
         bgcolor: '#1b5e20', 
@@ -1071,8 +1127,10 @@ const topPerformingPlants = useMemo(() => {
         fontWeight: 800,
         '&:hover': { bgcolor: '#2e7d32' }
       }}
+      // onClick={handleSaveGarden} 
+  disabled={isSaving}
     >
-      Save Plan
+      {isSaving ? "Saving..." : "Save Garden"}
     </Button>
   </Box>
 </Paper>
