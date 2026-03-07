@@ -1,0 +1,157 @@
+import React from 'react';
+import { Paper, Box, Typography, Button } from '@mui/material';
+import { Wallet, Scale } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+const FloatingStatsBar = ({ 
+  totalSavings, 
+  totalYield, 
+  user, 
+  handleDownloadPDF, 
+  isGeneratingPDF, 
+  handleClearSelection, 
+  hasUnsavedChanges, 
+  saveGarden, 
+  isSaving 
+}) => {
+  return (
+    <Paper 
+      className="floating-bar-class"
+      elevation={12} 
+      sx={{ 
+        position: 'fixed', 
+        bottom: { xs: 10, md: 30 }, 
+        left: '50%', 
+        transform: 'translateX(-50%)', 
+        width: { xs: '92%', md: '800px' }, 
+        p: { xs: 2, md: 3 }, 
+        borderRadius: { xs: 4, md: 8 }, 
+        display: 'flex', 
+        flexDirection: { xs: 'column', md: 'row' }, 
+        gap: { xs: 2, md: 0 },
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        zIndex: 1000 
+      }}
+    >
+      {/* STATS SECTION */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: { xs: 'space-around', md: 'flex-start' },
+        width: { xs: '100%', md: 'auto' },
+        gap: { xs: 1, md: 4 } 
+      }}>
+        
+        {/* 1. SAVINGS STAT */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ p: 1, bgcolor: '#e8f5e9', borderRadius: 2, display: { xs: 'none', sm: 'flex' } }}>
+            <Wallet size={20} color="#2e7d32" />
+          </Box>
+          <Box>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', fontSize: { xs: '0.6rem', md: '0.75rem' } }}>
+              EST. SAVINGS
+            </Typography>
+            <Typography sx={{ fontWeight: 900, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
+              ${totalSavings.toFixed(2)}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* 2. TOTAL YIELD STAT */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1.5, 
+          borderLeft: '2px solid #eee', 
+          pl: { xs: 2, md: 4 } 
+        }}>
+          <Box sx={{ p: 1, bgcolor: '#e3f2fd', borderRadius: 2, display: { xs: 'none', sm: 'flex' } }}>
+            <Scale size={20} color="#1565c0" />
+          </Box>
+          <Box>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', fontSize: { xs: '0.6rem', md: '0.75rem' } }}>
+              TOTAL YIELD
+            </Typography>
+            <Typography sx={{ fontWeight: 900, color: '#1565c0', fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
+              {totalYield.toFixed(1)} lbs
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* BUTTONS SECTION */}
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 1, 
+        width: { xs: '100%', md: 'auto' },
+        flexDirection: { xs: 'row', sm: 'row' },
+      }}>
+        <Button 
+          variant="outlined" 
+          onClick={() => {
+            if (!user) {
+              toast.error("Please Sign In to download your PDF report!", {
+                icon: '🔒',
+                style: { borderRadius: '10px', background: '#333', color: '#fff' }
+              });
+              return;
+            }
+            handleDownloadPDF();
+          }} 
+          disabled={isGeneratingPDF}
+          sx={{ 
+            flex: 1,
+            borderRadius: 3, 
+            fontWeight: 800, 
+            borderColor: '#1b5e20', 
+            color: '#1b5e20',
+            fontSize: { xs: '0.7rem', md: '0.875rem' },
+            px: { xs: 1, md: 2 },
+            '&:hover': {
+              bgcolor: !user ? 'transparent' : '#f1f8e9',
+              borderColor: '#1b5e20'
+            }
+          }}
+        >
+          {isGeneratingPDF ? '...' : 'PDF'}
+        </Button>
+
+        <Button 
+          data-html2canvas-ignore="true"
+          variant="outlined" 
+          onClick={handleClearSelection} 
+          disabled={!hasUnsavedChanges || isGeneratingPDF}
+          sx={{ 
+            flex: 0.5,
+            borderRadius: 3, 
+            fontWeight: 800, 
+            borderColor: '#d32f2f', 
+            color: '#d32f2f',
+            fontSize: { xs: '0.7rem', md: '0.875rem' }
+          }}
+        >
+          Clear
+        </Button>
+
+        <Button 
+          variant="contained" 
+          onClick={saveGarden}
+          disabled={isSaving}
+          sx={{ 
+            flex: 1.5, 
+            bgcolor: '#1b5e20', 
+            borderRadius: 3,
+            fontSize: { xs: '0.8rem', md: '1rem' }, 
+            fontWeight: 800,
+            '&:hover': { bgcolor: '#2e7d32' }
+          }}
+        >
+          {isSaving ? "Saving..." : "Save Garden"}
+        </Button>
+      </Box>
+    </Paper>
+  );
+};
+
+export default FloatingStatsBar;
