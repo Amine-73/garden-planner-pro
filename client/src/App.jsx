@@ -1,6 +1,6 @@
 import  { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { Container, Typography, Grid,  TextField, Box,Paper, Button ,CircularProgress} from '@mui/material';
+import { Container, Typography, Grid,  TextField, Box,Paper, Button ,Skeleton} from '@mui/material';
 import { Sprout, Scale,  Wallet, Trash2 } from 'lucide-react';
 import {  toast } from 'react-hot-toast';
 import { plantImages } from './assets/images';
@@ -14,6 +14,7 @@ import PDFHeader from './components/PDFHeader';
 import SavingsChart from './components/SavingsChart';
 import GardenHistory from './components/GardenHistory';
 import { generateGardenPDF } from './utils/pdfGenerator';
+import { SkeletonGrid, SkeletonTable } from './components/SkeletonLoaders';
 
 
 const getSeason = (name) => {
@@ -42,7 +43,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [gardenName, setGardenName] = useState('');
   const open = Boolean(anchorEl);
+  const hasUnsavedChanges = Object.values(gardenData).some(val => val > 0);
 
 const handleMenuOpen = (event) => {
   setAnchorEl(event.currentTarget);
@@ -144,6 +147,20 @@ useEffect(() => {
     loadData();
   }, []);
 
+
+  useEffect(() => {
+  const handleBeforeUnload = (e) => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = ''; // Standard requirement for modern browsers
+    }
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+
   const totalSavings = useMemo(() => {
     return plants.reduce((acc, plant) => {
       const qty = gardenData[plant._id] || 0;
@@ -205,8 +222,12 @@ useEffect(() => {
     toast.error("Please sign in to save!");
     return;
   }
-  
-  setIsSaving(true);
+
+  // NEW: Validation for the name
+  if (!gardenName.trim()) {
+    toast.error("Please give your garden a name!");
+    return;
+  }
 
   const items = Object.entries(gardenData)
     .filter(([_, qty]) => qty > 0)
@@ -217,40 +238,48 @@ useEffect(() => {
     return;
   }
 
-  // MATCH THE NAMES HERE TO THE BACKEND
-  const gardenPayload = {
-    userId: user.uid,
-    userEmail: user.email,
-    items: items, // <--- Use 'items', not 'plants'
-    totalEstimatedSavings: totalSavings, // <--- Match the backend name
-    date: new Date()
-  };
-
+  setIsSaving(true);
   try {
-    await axios.post(`${import.meta.env.VITE_API_URL}/api/gardens`, gardenPayload);
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/gardens`, {
+      userId: user.uid,
+      userEmail: user.email,
+      name: gardenName, // <--- Add the name here
+      items: items,
+      totalEstimatedSavings: totalSavings,
+      date: new Date()
+    });
+    
     fetchGardenHistory(); 
-    toast.success('Garden plan saved successfully! 🌱');                   
+    setGardenName(''); // Clear the name after saving
+    toast.success(`'${gardenName}' saved successfully! 🌱`);
   } catch (error) {
     console.error("Save Error:", error.response?.data);
-    toast.error(error.response?.data?.message || "Failed to save.");
-  }finally{
+  } finally {
     setIsSaving(false);
   }
 };
 
-    const handleLoadGarden = (garden) => {
+  const handleLoadGarden = (garden) => {
+  
   const loadedData = {};
   
-  // Convert the items array back into the format your state uses { plantId: quantity }
+  // 1. Map the items back to the gardenData state
   garden.items.forEach(item => {
-    if (item.plantId) {
-      loadedData[item.plantId._id] = item.quantity;
+    // Check if plantId is an object (populated) or just an ID string
+    const plantId = item.plantId?._id || item.plantId; 
+    if (plantId) {
+      loadedData[plantId] = item.quantity;
     }
   });
 
-  setGardenData(loadedData); // This fills the input boxes!
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  toast.success("Plan loaded! You can now edit and save it again.");
+  // 2. Update state
+  setGardenData(loadedData); 
+  setGardenName(garden.name || "");
+  // 3. FORCE the scroll to the very top of the page
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+  toast.success("Plan loaded! Check the top of the page.");
 };
 
   const handleClearSelection = () => {
@@ -281,9 +310,9 @@ const topPerformingPlants = useMemo(() => {
       try {
         await axios.delete(`${import.meta.env.VITE_API_URL}/api/gardens/${id}`);
         fetchGardenHistory();
-        toast.error('Plan removed from history', { icon: '🗑️' });
+        toast.success('Plan removed from history', { icon: '🗑️' });
       } catch (error) {
-        toast.error("Failed to delete.");
+        // toast.error("Failed to delete.");
       }
     }
   };
@@ -291,16 +320,16 @@ const topPerformingPlants = useMemo(() => {
   const clearAllPlans = async () => {
   if (window.confirm("Are you sure you want to delete ALL saved plans? This cannot be undone.")) {
     try {
-      // We'll need to create this route in the backend next!
+      
       await axios.delete(`${import.meta.env.VITE_API_URL}/api/gardens`);
       fetchGardenHistory();
     } catch (error) {
-      toast.error("Error clearing history");
+      // toast.error("Error clearing history");
     }
   }
   };
 
-  const hasUnsavedChanges = Object.values(gardenData).some(val => val > 0);
+
 
   // ----------EXECEL-STYLE SPREADSHEET
   const exportToCSV = () => {
@@ -322,11 +351,6 @@ const topPerformingPlants = useMemo(() => {
     // Return a single comma-separated string for this row
     return [date, `"${plants}"`, yieldLbs, savings].join(",");
   });
-
-
-
-
-
 
 
   // 3. Combine headers and rows with new lines
@@ -359,13 +383,22 @@ const topPerformingPlants = useMemo(() => {
       {/* ================ HEADER ================== */}
 
       {isLoading ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 2 }}>
-          <CircularProgress sx={{ color: '#2e7d32' }} />
-          <Typography color="text.secondary" sx={{ fontWeight: 600 }}>
-            Growing your garden...
-          </Typography>
+        <Container maxWidth="xl" sx={{ mt: 6 }}>
+          {/* Mimic the Header text loading */}
+          <Box sx={{ mb: 6, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Skeleton variant="text" width="40%" height={60} />
+            <Skeleton variant="text" width="25%" height={30} />
+          </Box>
           
-        </Box>
+          {/* The Plant Grid Loading State */}
+          <SkeletonGrid />
+
+          {/* The History Loading State */}
+          <Box sx={{ mt: 10 }}>
+            <Skeleton variant="text" width="200px" height={40} />
+            <SkeletonTable />
+          </Box>
+        </Container>
       ) :(
       <Container  maxWidth="xl" sx={{ mt: 6, pb: '200px' }}>
         
@@ -410,9 +443,9 @@ const topPerformingPlants = useMemo(() => {
     justifyContent: { xs: 'flex-start', md: 'center' }, 
     gap: 1, 
     mb: 4,
-    pb: 1, // Space for the scrollbar if it appears
-    overflowX: 'auto', // Enable horizontal scrolling
-    whiteSpace: 'nowrap', // Prevent buttons from jumping to a second line
+    pb: 1, 
+    overflowX: 'auto', 
+    whiteSpace: 'nowrap', 
     // Hide scrollbar for a cleaner look (optional)
     '&::-webkit-scrollbar': { display: 'none' },
     msOverflowStyle: 'none',
@@ -576,6 +609,9 @@ const topPerformingPlants = useMemo(() => {
   hasUnsavedChanges={hasUnsavedChanges}
   saveGarden={saveGarden}
   isSaving={isSaving}
+  gardenName={gardenName}
+  setGardenName={setGardenName}
+  
 />
     </Box>
   );

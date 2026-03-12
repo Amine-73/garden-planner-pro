@@ -1,7 +1,8 @@
 import React from 'react';
-import { Paper, Box, Typography, Button } from '@mui/material';
+import { Paper, Box, Typography, Button,TextField  } from '@mui/material';
 import { Wallet, Scale } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { Sprout, FileText, Trash2, Download } from 'lucide-react';
 
 const FloatingStatsBar = ({ 
   totalSavings, 
@@ -12,7 +13,9 @@ const FloatingStatsBar = ({
   handleClearSelection, 
   hasUnsavedChanges, 
   saveGarden, 
-  isSaving 
+  isSaving ,
+  gardenName,
+  setGardenName
 }) => {
   return (
     <Paper 
@@ -87,6 +90,46 @@ const FloatingStatsBar = ({
         width: { xs: '100%', md: 'auto' },
         flexDirection: { xs: 'row', sm: 'row' },
       }}>
+
+        <TextField
+  size="small"
+  placeholder="Name your garden..."
+  value={gardenName}
+  onChange={(e) => setGardenName(e.target.value)}
+  InputProps={{
+    startAdornment: (
+      <Box sx={{ color: '#2e7d32', mr: 1, display: 'flex', opacity: 0.7 }}>
+        <Sprout size={16} /> 
+      </Box>
+    ),
+  }}
+  sx={{
+    width: { xs: '150px', md: '220px' },
+    mx: 1, 
+    '& .MuiOutlinedInput-root': {
+      height: '45px', 
+      borderRadius: '12px',
+      backgroundColor: '#f9fbf9',
+      transition: 'all 0.3s ease',
+      fontSize: '0.9rem',
+      '& fieldset': {
+        borderColor: '#e0e0e0',
+      },
+      '&:hover fieldset': {
+        borderColor: '#2e7d32',
+      },
+      '&.Mui-focused fieldset': {
+        borderWidth: '2px',
+        borderColor: '#2e7d32',
+      },
+    },
+    '& .MuiInputBase-input::placeholder': {
+      fontSize: '0.85rem',
+      fontStyle: 'italic',
+      opacity: 0.7,
+    },
+  }}
+/>
         <Button 
           variant="outlined" 
           onClick={() => {
