@@ -31,7 +31,6 @@ const deleteGarden = async (req, res) => {
   try {
     const { id } = req.params;
     const deletedGarden = await Garden.findByIdAndDelete(id);
-    console.log("Backend received ID:", req.params.id);
     if (!deletedGarden) {
       return res.status(404).json({ message: "Garden plan not found" });
     }
@@ -47,7 +46,7 @@ const deleteGarden = async (req, res) => {
 // SAVE A NEW GARDEN
 const saveGarden = async (req, res) => {
   // 1. Add userId and userEmail to the destructuring
-  const { items, totalEstimatedSavings, userId, userEmail } = req.body;
+  const { name,items, totalEstimatedSavings, userId, userEmail } = req.body;
 
   if (!items || items.length === 0) {
     return res
@@ -58,6 +57,7 @@ const saveGarden = async (req, res) => {
   try {
     // 2. Include the user info in the new Garden object
     let newGarden = new Garden({
+      name:name||"My Dream Garden",
       items,
       totalEstimatedSavings,
       userId,
