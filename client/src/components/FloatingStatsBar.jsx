@@ -1,8 +1,21 @@
 import React from 'react';
-import { Paper, Box, Typography, Button,TextField  } from '@mui/material';
+import { Paper, Box, Typography, Button,TextField ,Divider } from '@mui/material';
 import { Wallet, Scale } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Sprout, FileText, Trash2, Download } from 'lucide-react';
+
+const formatCurrency = (val) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0, 
+  }).format(val);
+};
+
+const formatWeight = (val) => {
+  // If yield is over 1000 lbs, show '1.2k' instead of '1200.0000004'
+  return val > 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(1);
+};
 
 const FloatingStatsBar = ({ 
   totalSavings, 
@@ -26,15 +39,18 @@ const FloatingStatsBar = ({
         bottom: { xs: 10, md: 30 }, 
         left: '50%', 
         transform: 'translateX(-50%)', 
-        width: { xs: '92%', md: '800px' }, 
+        width: 'auto', 
         p: { xs: 2, md: 3 }, 
         borderRadius: { xs: 4, md: 8 }, 
         display: 'flex', 
         flexDirection: { xs: 'column', md: 'row' }, 
-        gap: { xs: 2, md: 0 },
+        // gap: { xs: 2, md: 0 },
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        zIndex: 1000 
+        zIndex: 1100 ,
+        maxWidth: '95vw', // Prevents it from going off-screen on mobile
+        overflow: 'hidden', // Keeps everything inside the rounded corners
+        gap: 2, // Space between elements
       }}
     >
       {/* STATS SECTION */}
@@ -47,7 +63,7 @@ const FloatingStatsBar = ({
       }}>
         
         {/* 1. SAVINGS STAT */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{minWidth: '120px', display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box sx={{ p: 1, bgcolor: '#e8f5e9', borderRadius: 2, display: { xs: 'none', sm: 'flex' } }}>
             <Wallet size={20} color="#2e7d32" />
           </Box>
@@ -56,17 +72,18 @@ const FloatingStatsBar = ({
               EST. SAVINGS
             </Typography>
             <Typography sx={{ fontWeight: 900, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
-              ${totalSavings.toFixed(2)}
+              {formatCurrency(totalSavings)}
             </Typography>
           </Box>
         </Box>
-
+<Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         {/* 2. TOTAL YIELD STAT */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
           gap: 1.5, 
           borderLeft: '2px solid #eee', 
+          minWidth: '100px',
           pl: { xs: 2, md: 4 } 
         }}>
           <Box sx={{ p: 1, bgcolor: '#e3f2fd', borderRadius: 2, display: { xs: 'none', sm: 'flex' } }}>
@@ -77,7 +94,7 @@ const FloatingStatsBar = ({
               TOTAL YIELD
             </Typography>
             <Typography sx={{ fontWeight: 900, color: '#1565c0', fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
-              {totalYield.toFixed(1)} lbs
+              {formatWeight(totalYield)} lbs
             </Typography>
           </Box>
         </Box>
